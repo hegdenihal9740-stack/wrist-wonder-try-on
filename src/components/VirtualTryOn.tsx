@@ -72,6 +72,19 @@ export function VirtualTryOn({ watch, open, onClose }: { watch: Watch; open: boo
   const [flash, setFlash] = useState(false);
   const [controlsShown, setControlsShown] = useState(true);
   const hideTimer = useRef(0);
+  const [sizeMm, setSizeMm] = useState(42);
+  const [shot, setShot] = useState<{ blob: Blob; url: string } | null>(null);
+  const shotName = () => `private-flight-${finish}-try-on.png`;
+  const download = () => { if (!shot) return; const a = document.createElement('a'); a.href = shot.url; a.download = shotName(); a.click(); };
+  const share = async () => {
+    if (!shot) return;
+    const name = watches.find(x => x.id === finish)?.name ?? 'watch';
+    const text = `Does this Private Flight ${name} look good on me? ${window.location.origin}/shop/${finish}`;
+    const file = new File([shot.blob], shotName(), { type: 'image/png' });
+    if (navigator.canShare?.({ files: [file] })) { try { await navigator.share({ files: [file], text }); return; } catch { return; } }
+    download();
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank', 'noopener');
+  };
 
   useEffect(() => { setFinish(watch.id as Finish); }, [watch.id]);
 
@@ -248,13 +261,12 @@ export function VirtualTryOn({ watch, open, onClose }: { watch: Watch; open: boo
     g.textAlign = 'right';
     g.font = `400 ${Math.round(Math.max(20, w * .028))}px 'Libre Baskerville', Georgia, serif`;
     g.fillText('Timepiece', w - 24, 48);
+    g.font = `600 ${Math.round(Math.max(14, w * .018))}px Karla, Arial, sans-serif`;
+    g.textAlign = 'left';
+    g.fillText(`Private Flight · ${watches.find(x => x.id === finish)?.name ?? ''}`, 24, h - 28);
     out.toBlob(blob => {
       if (!blob) return;
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = `timepiece-${finish}-try-on.png`;
-      a.click();
-      setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+      setShot(prev => { if (prev) URL.revokeObjectURL(prev.url); return { blob, url: URL.createObjectURL(blob) }; });
     }, 'image/png');
     setFlash(true); setTimeout(() => setFlash(false), 220);
   };
