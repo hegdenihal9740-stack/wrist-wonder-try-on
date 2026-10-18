@@ -26,7 +26,7 @@ function SellerPage() {
   const [filter, setFilter] = useState('all');
   const [q, setQ] = useState('');
   const [err, setErr] = useState('');
-  const [tab, setTab] = useState<'orders' | 'products'>('orders');
+  const [tab, setTab] = useState<'orders' | 'products' | 'settings'>('orders');
 
   async function checkRole() {
     if (!user) return;
@@ -58,8 +58,7 @@ function SellerPage() {
   else if (role === 'taken') body = <p>This page is only for the store owner.</p>;
   else body = <>
     <div className="flex gap-2"><Button variant={tab === 'orders' ? 'default' : 'outline'} onClick={() => setTab('orders')}>Orders</Button><Button variant={tab === 'products' ? 'default' : 'outline'} onClick={() => setTab('products')}>Products</Button><Button variant={tab === 'settings' ? 'default' : 'outline'} onClick={() => setTab('settings')}>Owner settings</Button></div>
-    {tab === 'settings' ? <TransferOwner onDone={() => setRole('taken')} /> :
-    {tab === 'products' ? <ProductManager /> : <>
+    {tab === 'settings' ? <TransferOwner onDone={() => setRole('taken')} /> : tab === 'products' ? <ProductManager /> : <>
     <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
       {[['Revenue', inr(revenue)], ['To pack', count('confirmed')], ['In transit', count('shipped') + count('out_for_delivery') + count('packed')], ['Delivered', count('delivered')]].map(([k, v]) => <div key={k} className="rounded-lg border border-border p-3"><p className="text-xs text-muted-foreground">{k}</p><p className="text-lg font-semibold">{v}</p></div>)}
     </div>
@@ -68,7 +67,6 @@ function SellerPage() {
     {shown.length === 0 ? <p className="text-muted-foreground">No orders.</p> : shown.map((o) => <OrderCard key={o.id} order={o} onSaved={load} />)}
     </>}
   </>;
-  if (role === 'admin' && tab === 'settings') body = <>{(body as any).props.children[0]}<TransferOwner onDone={() => setRole('taken')} /></>;
 
   return <main className="shop-page acc-page"><ShopHeader /><div className="acc-wrap space-y-4"><h1 className="acc-h">Seller dashboard</h1>{err && <p role="alert" className="text-destructive">{err}</p>}{body}</div></main>;
 }
