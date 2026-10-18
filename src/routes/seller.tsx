@@ -105,3 +105,27 @@ function OrderCard({ order: o, onSaved }: { order: Order; onSaved: () => void })
     <div className="flex flex-wrap items-center gap-3"><Button size="sm" disabled={busy} onClick={save}>{busy ? 'Saving…' : 'Save'}</Button>{link && <a className="text-sm underline" href={link} target="_blank" rel="noreferrer">Track ↗</a>}<Link to="/invoice/$orderId" params={{ orderId: o.id }} className="text-sm underline">Invoice</Link>{msg && <span className="text-sm">{msg}</span>}</div>
   </article>;
 }
+
+function TransferOwner({ onDone }: { onDone: () => void }) {
+  const [email, setEmail] = useState('');
+  const [msg, setMsg] = useState('');
+  const [busy, setBusy] = useState(false);
+  const MSGS: Record<string, string> = { no_account: 'No account with that email. Ask them to sign up on the website first.', same: 'That is already your account.', not_owner: 'Only the owner can do this.' };
+  async function go(e: React.FormEvent) {
+    e.preventDefault(); setMsg('');
+    if (!email.includes('@')) { setMsg('Enter a valid email.'); return; }
+    if (!confirm(`Make ${email} the new store owner? You will lose seller access.`)) return;
+    setBusy(true);
+    const { data, error } = await db.rpc('transfer_store_owner', { _new_email: email });
+    setBusy(false);
+    if (error) { setMsg('Transfer failed, please try again.'); return; }
+    if (data === 'ok') { alert(`${email} is now the store owner.`); onDone(); } else setMsg(MSGS[data] ?? 'Transfer failed.');
+  }
+  return <form onSubmit={go} className="acc-card space-y-2">
+    <h2 className="text-lg font-semibold">Transfer store ownership</h2>
+    <p className="text-sm text-muted-foreground">The new owner must sign up on the website first. After transfer, only they can open this dashboard.</p>
+    <Input type="email" placeholder="New owner email (e.g. company email)" value={email} onChange={(e) => setEmail(e.target.value)} />
+    {msg && <p role="alert" className="text-sm text-destructive">{msg}</p>}
+    <Button type="submit" disabled={busy}>{busy ? 'Transferring…' : 'Transfer ownership'}</Button>
+  </form>;
+}
