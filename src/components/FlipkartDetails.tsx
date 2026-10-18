@@ -1,8 +1,10 @@
-import { ShoppingCart, Zap, Star, Tag, ShieldCheck, RotateCcw, Truck, MapPin, Heart } from 'lucide-react';
+import { ShoppingCart, Zap, Star, Tag, ShieldCheck, RotateCcw, Truck, MapPin, Heart, MessageCircle } from 'lucide-react';
 import { useWishlist, wishlist } from '@/lib/wishlist';
 import { useStock, stockLabel } from '@/lib/inventory';
 import { toast } from 'sonner';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { whatsappLink } from '@/lib/whatsapp';
+import { Reviews } from '@/components/Reviews';
 import { ChevronLeft, ChevronRight, X, ZoomIn } from 'lucide-react';
 import steelJpg from '@/assets/watch-steel.jpg';
 import blackJpg from '@/assets/watch-black.jpg';
@@ -86,6 +88,17 @@ export function FlipkartDetails({
   ];
   useEffect(() => { if (!open) setPick(null); }, [open]);
   useEffect(() => { setIdx(0); setZoom(false); setFull(false); }, [active]);
+  const actionsRef = useRef<HTMLDivElement>(null);
+  const [showSticky, setShowSticky] = useState(false);
+  useEffect(() => {
+    const el = actionsRef.current;
+    if (!el || !asPage) return;
+    const io = new IntersectionObserver(([e]) => setShowSticky(!e!.isIntersecting && e!.boundingClientRect.top < 0));
+    io.observe(el);
+    return () => io.disconnect();
+  }, [asPage]);
+  const buyNow = () => { if (onBuy) { onBuy(w.id); return; } cart.add(w.id); toast.success('Proceeding to checkout'); onOpenChange(false); };
+  const addCart = () => { cart.add(w.id); toast.success(`${w.name} (${dial}) added to cart`); };
   return (
     <>
     {(() => { const body = (
@@ -138,11 +151,16 @@ export function FlipkartDetails({
               ))}</div>
             </div>
             {left !== undefined && <p className={sold ? 'fk-pin-msg is-err' : left <= 3 ? 'fk-pin-msg is-err' : 'fk-pin-msg is-ok'}>{stockLabel(left)}</p>}
-            <div className="fk-actions">
-              <button type="button" className="fk-buy" disabled={sold} onClick={() => { if (onBuy) { onBuy(w.id); return; } cart.add(w.id); toast.success('Proceeding to checkout'); onOpenChange(false); }}><Zap size={16} /> Buy now</button>
-              <button type="button" className="fk-cart" disabled={sold} onClick={() => { cart.add(w.id); toast.success(`${w.name} (${dial}) added to cart`); }}><ShoppingCart size={16} /> Add to cart</button>
+            <div className="fk-actions" ref={actionsRef}>
+              <button type="button" className="fk-buy" disabled={sold} onClick={buyNow}><Zap size={16} /> Buy now</button>
+              <button type="button" className="fk-cart" disabled={sold} onClick={addCart}><ShoppingCart size={16} /> Add to cart</button>
             </div>
-            {asPage && null}
+            <a className="fk-wa" href={whatsappLink(`Hi! I'm interested in the Private Flight ${w.name} (₹${usd(price)}, ${dial}). Can you share live photos and the delivery timeline?`)} target="_blank" rel="noopener noreferrer"><MessageCircle size={16} /> Ask or order on WhatsApp</a>
+            {asPage && showSticky && !sold && <div className="fk-sticky">
+              <span className="fk-sticky-price"><b>₹{usd(price)}</b><small>{off}% off · Free delivery</small></span>
+              <button type="button" className="fk-cart" onClick={addCart}>Add to cart</button>
+              <button type="button" className="fk-buy" onClick={buyNow}>Buy now</button>
+            </div>}
             <div className="fk-trust">
               <div className="fk-trust-card t-green"><Truck size={22} /><b>Free Delivery</b><span>By {deliveryDate}</span></div>
               <div className="fk-trust-card t-blue"><RotateCcw size={22} /><b>7 Days</b><span>Easy replacement</span></div>
@@ -168,6 +186,7 @@ export function FlipkartDetails({
               <h4>Specifications</h4>
               <dl className="fk-table">{table.map(([k, v]) => <div key={k + v}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>
             </div>
+            <Reviews tone={active} rating={m.rating} total={m.reviews} />
             <div className="fk-section">
               <h4>You may also like</h4>
               <div className="fk-recs">
