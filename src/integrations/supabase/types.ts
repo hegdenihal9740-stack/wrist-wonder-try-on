@@ -173,6 +173,7 @@ export type Database = {
         Returns: boolean
       }
       store_has_owner: { Args: never; Returns: boolean }
+      transfer_store_owner: { Args: { _new_email: string }; Returns: string }
     }
     Enums: {
       app_role: "admin" | "user"
