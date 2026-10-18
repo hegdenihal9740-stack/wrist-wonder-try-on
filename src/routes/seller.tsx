@@ -26,7 +26,7 @@ function SellerPage() {
   const [filter, setFilter] = useState('all');
   const [q, setQ] = useState('');
   const [err, setErr] = useState('');
-  const [tab, setTab] = useState<'orders' | 'products'>('orders');
+  const [tab, setTab] = useState<'orders' | 'products' | 'settings'>('orders');
 
   async function checkRole() {
     if (!user) return;
@@ -57,8 +57,8 @@ function SellerPage() {
   else if (role === 'none') body = <div className="space-y-3"><p>This store has no owner yet. Claim it to manage orders.</p><Button onClick={claim}>Claim store ownership</Button></div>;
   else if (role === 'taken') body = <p>This page is only for the store owner.</p>;
   else body = <>
-    <div className="flex gap-2"><Button variant={tab === 'orders' ? 'default' : 'outline'} onClick={() => setTab('orders')}>Orders</Button><Button variant={tab === 'products' ? 'default' : 'outline'} onClick={() => setTab('products')}>Products</Button></div>
-    {tab === 'products' ? <ProductManager /> : <>
+    <div className="flex gap-2"><Button variant={tab === 'orders' ? 'default' : 'outline'} onClick={() => setTab('orders')}>Orders</Button><Button variant={tab === 'products' ? 'default' : 'outline'} onClick={() => setTab('products')}>Products</Button><Button variant={tab === 'settings' ? 'default' : 'outline'} onClick={() => setTab('settings')}>Owner settings</Button></div>
+    {tab === 'settings' ? <TransferOwner onDone={() => setRole('taken')} /> : tab === 'products' ? <ProductManager /> : <>
     <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
       {[['Revenue', inr(revenue)], ['To pack', count('confirmed')], ['In transit', count('shipped') + count('out_for_delivery') + count('packed')], ['Delivered', count('delivered')]].map(([k, v]) => <div key={k} className="rounded-lg border border-border p-3"><p className="text-xs text-muted-foreground">{k}</p><p className="text-lg font-semibold">{v}</p></div>)}
     </div>
@@ -104,4 +104,28 @@ function OrderCard({ order: o, onSaved }: { order: Order; onSaved: () => void })
     {courier === 'Other' && <Input placeholder="Tracking link (https://…)" value={url} onChange={(e) => setUrl(e.target.value)} />}
     <div className="flex flex-wrap items-center gap-3"><Button size="sm" disabled={busy} onClick={save}>{busy ? 'Saving…' : 'Save'}</Button>{link && <a className="text-sm underline" href={link} target="_blank" rel="noreferrer">Track ↗</a>}<Link to="/invoice/$orderId" params={{ orderId: o.id }} className="text-sm underline">Invoice</Link>{msg && <span className="text-sm">{msg}</span>}</div>
   </article>;
+}
+
+function TransferOwner({ onDone }: { onDone: () => void }) {
+  const [email, setEmail] = useState('');
+  const [msg, setMsg] = useState('');
+  const [busy, setBusy] = useState(false);
+  const MSGS: Record<string, string> = { no_account: 'No account with that email. Ask them to sign up on the website first.', same: 'That is already your account.', not_owner: 'Only the owner can do this.' };
+  async function go(e: React.FormEvent) {
+    e.preventDefault(); setMsg('');
+    if (!email.includes('@')) { setMsg('Enter a valid email.'); return; }
+    if (!confirm(`Make ${email} the new store owner? You will lose seller access.`)) return;
+    setBusy(true);
+    const { data, error } = await db.rpc('transfer_store_owner', { _new_email: email });
+    setBusy(false);
+    if (error) { setMsg('Transfer failed, please try again.'); return; }
+    if (data === 'ok') { alert(`${email} is now the store owner.`); onDone(); } else setMsg(MSGS[data] ?? 'Transfer failed.');
+  }
+  return <form onSubmit={go} className="acc-card space-y-2">
+    <h2 className="text-lg font-semibold">Transfer store ownership</h2>
+    <p className="text-sm text-muted-foreground">The new owner must sign up on the website first. After transfer, only they can open this dashboard.</p>
+    <Input type="email" placeholder="New owner email (e.g. company email)" value={email} onChange={(e) => setEmail(e.target.value)} />
+    {msg && <p role="alert" className="text-sm text-destructive">{msg}</p>}
+    <Button type="submit" disabled={busy}>{busy ? 'Transferring…' : 'Transfer ownership'}</Button>
+  </form>;
 }
