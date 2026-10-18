@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from '@tanstack/react-router';
 import { useEffect, useState } from 'react';
-import { CheckCircle2, MapPin, Trash2 } from 'lucide-react';
+import { BadgeCheck, CheckCircle2, MapPin, MessageCircle, RotateCcw, ShieldCheck, Trash2, Truck } from 'lucide-react';
+import { whatsappLink } from '@/lib/whatsapp';
 import { toast } from 'sonner';
 import { ShopHeader } from '@/components/ShopHeader';
 import { cart, prices, useCart } from '@/lib/cart';
