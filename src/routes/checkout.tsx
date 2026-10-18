@@ -130,6 +130,11 @@ function Checkout() {
         <div><span>Price ({count} item{count > 1 ? 's' : ''})</span><span>{usd(total)}</span></div>
         <div><span>Delivery charges</span><span className="fk-delivery-free">Free</span></div>
         <div className="co-total"><span>Total amount</span><span>{usd(total)}</span></div>
+        <ul className="co-badges">
+          <li><BadgeCheck size={16} /> 100% Original</li><li><ShieldCheck size={16} /> 2-Year Warranty</li>
+          <li><RotateCcw size={16} /> 7-Day Easy Returns</li><li><Truck size={16} /> Free Insured Shipping</li>
+        </ul>
+        <a className="fk-wa" href={whatsappLink(`Hi! I'd like help ordering: ${lines.map((l) => `${watches.find((x) => x.id === l.id)!.name} × ${l.qty}`).join(', ')} (total ${usd(total)}).`)} target="_blank" rel="noopener noreferrer"><MessageCircle size={16} /> Need help? Order on WhatsApp</a>
         {item ? <Link to="/shop/$watchId" params={{ watchId: item }} className="co-change">← Back to product</Link> : <Link to="/collection" className="co-change">← Keep shopping</Link>}
       </aside>}
     </div>
