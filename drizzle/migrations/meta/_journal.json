@@ -43,6 +43,13 @@
       "when": 1792339603534,
       "tag": "0005_owner_transfer",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1792341321519,
+      "tag": "0006_product_reviews",
+      "breakpoints": true
     }
   ]
 }

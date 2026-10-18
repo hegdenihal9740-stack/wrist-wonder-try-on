@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Aperture, Camera, SwitchCamera, X } from 'lucide-react';
+import { Aperture, Camera, Download, Share2, SwitchCamera, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { watches } from '@/lib/watches';
 import { createPoseFilter, wristPoseFromLandmarks } from '@/lib/wrist-pose';
@@ -72,6 +72,19 @@ export function VirtualTryOn({ watch, open, onClose }: { watch: Watch; open: boo
   const [flash, setFlash] = useState(false);
   const [controlsShown, setControlsShown] = useState(true);
   const hideTimer = useRef(0);
+  const [sizeMm, setSizeMm] = useState(42);
+  const [shot, setShot] = useState<{ blob: Blob; url: string } | null>(null);
+  const shotName = () => `private-flight-${finish}-try-on.png`;
+  const download = () => { if (!shot) return; const a = document.createElement('a'); a.href = shot.url; a.download = shotName(); a.click(); };
+  const share = async () => {
+    if (!shot) return;
+    const name = watches.find(x => x.id === finish)?.name ?? 'watch';
+    const text = `Does this Private Flight ${name} look good on me? ${window.location.origin}/shop/${finish}`;
+    const file = new File([shot.blob], shotName(), { type: 'image/png' });
+    if (navigator.canShare?.({ files: [file] })) { try { await navigator.share({ files: [file], text }); return; } catch { return; } }
+    download();
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank', 'noopener');
+  };
 
   useEffect(() => { setFinish(watch.id as Finish); }, [watch.id]);
 
@@ -248,13 +261,12 @@ export function VirtualTryOn({ watch, open, onClose }: { watch: Watch; open: boo
     g.textAlign = 'right';
     g.font = `400 ${Math.round(Math.max(20, w * .028))}px 'Libre Baskerville', Georgia, serif`;
     g.fillText('Timepiece', w - 24, 48);
+    g.font = `600 ${Math.round(Math.max(14, w * .018))}px Karla, Arial, sans-serif`;
+    g.textAlign = 'left';
+    g.fillText(`Private Flight · ${watches.find(x => x.id === finish)?.name ?? ''}`, 24, h - 28);
     out.toBlob(blob => {
       if (!blob) return;
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = `timepiece-${finish}-try-on.png`;
-      a.click();
-      setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+      setShot(prev => { if (prev) URL.revokeObjectURL(prev.url); return { blob, url: URL.createObjectURL(blob) }; });
     }, 'image/png');
     setFlash(true); setTimeout(() => setFlash(false), 220);
   };
@@ -264,7 +276,7 @@ export function VirtualTryOn({ watch, open, onClose }: { watch: Watch; open: boo
   return <div className="try-on-dialog" role="dialog" aria-modal="true" aria-labelledby="try-on-title">
     <div className="try-on-stage" ref={stageRef} data-active={cameraActive} onPointerDown={reveal}>
       <video ref={videoRef} className="try-on-video" data-mirrored={mirrored} playsInline muted aria-label="Live camera view" />
-      <TryOnScene finish={finish} target={targetRef} ambient={ambientRef} caseMm={finish === 'black' || finish === 'gold' ? 32 : 36} />
+      <TryOnScene finish={finish} target={targetRef} ambient={ambientRef} caseMm={(finish === 'black' || finish === 'gold' ? 32 : 36) * sizeMm / 42} />
       {status === 'searching' && <div className="try-on-guide" aria-hidden="true"><svg className="try-on-guide-wrist" viewBox="0 0 220 440" fill="none" aria-hidden="true">
             <path d="M78 438 L80 300 C70 280 52 262 40 236 C30 214 22 190 18 168 C15 154 28 148 36 160 L58 206 L56 92 C56 78 76 78 77 92 L80 180 L84 52 C84 36 106 36 107 52 L108 176 L114 64 C115 48 136 49 136 65 L134 182 L142 90 C144 76 163 78 162 93 L156 212 C154 250 146 280 140 300 L142 438" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" strokeDasharray="6 7" />
             <rect x="72" y="318" width="76" height="34" rx="10" stroke="currentColor" strokeWidth="2" opacity=".7" />
@@ -301,6 +313,18 @@ export function VirtualTryOn({ watch, open, onClose }: { watch: Watch; open: boo
         </div>
         <button type="button" className="try-on-shutter" aria-label="Take photo" title="Take photo" onClick={capture}><Aperture /></button>
       </div>
+      <label className="try-on-size" data-hidden={!controlsShown}>
+        <span>Case {sizeMm} mm</span>
+        <input type="range" min={38} max={46} step={1} value={sizeMm} onChange={e => setSizeMm(Number(e.target.value))} aria-label="Watch case size" />
+      </label>
+      {shot && <div className="try-on-shot" role="dialog" aria-label="Your try-on photo">
+        <img src={shot.url} alt="Your wrist wearing the watch" />
+        <div className="try-on-shot-actions">
+          <Button onClick={() => void share()}><Share2 /> Share</Button>
+          <Button variant="secondary" onClick={download}><Download /> Save</Button>
+          <Button variant="ghost" onClick={() => { URL.revokeObjectURL(shot.url); setShot(null); }}>Retake</Button>
+        </div>
+      </div>}
     </div>
   </div>;
 }
